@@ -16,7 +16,7 @@ Download arch-browser_0.1.0_amd64.deb from the GitHub Actions artifact and insta
 
 Launch Arch Browser from the applications menu or run arch-browser in a terminal.
 
-The Debian package contains the matching CEF shared library, Chromium resources, locales and sandbox helper. It also installs the application launcher and desktop icon. The package targets Ubuntu 24.04 and newer x86_64 systems; it is not an ARM build.
+The Debian package contains the matching CEF shared library, Chromium resources, locales and sandbox helper. Debug-only symbols are stripped from the bundled CEF library to reduce the installed size. It also installs the application launcher and desktop icon. The package targets Ubuntu 24.04 and newer x86_64 systems; it is not an ARM build.
 
 ## Development
 
