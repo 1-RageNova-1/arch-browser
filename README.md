@@ -4,9 +4,20 @@ Arch Browser is a Rust desktop browser powered by Chromium Embedded Framework (C
 
 ## Privacy protection
 
-Network requests are checked by [Brave's adblock-rust engine](https://github.com/brave/adblock-rust), using the EasyList and EasyPrivacy filter lists plus Arch Browser's dedicated Google advertising and analytics rules. Known third-party ads and trackers are cancelled before they are fetched. The bundled filter lists are refreshed when a new Debian package is built.
+Arch Browser enables the CEF Chrome runtime and configures the official **uBlock Origin Lite** extension for automatic installation at first launch. It is the Manifest V3 version maintained by Raymond Hill. Its default rules include uBlock's built-in lists, EasyList, EasyPrivacy and Peter Lowe's ad/tracking server list. The extension is force-installed through a per-user Chromium policy that points to the official Chrome Web Store update service.
 
-The protection works at the network-request level. It blocks many known Google trackers and common third-party trackers, but it does not remove Chromium/CEF source code, guarantee removal of every first-party Google telemetry request, or provide complete fingerprinting protection. Cosmetic element hiding and scriptlet injection are not yet integrated.
+The existing [Brave adblock-rust](https://github.com/brave/adblock-rust) network filter remains as an additional request-level layer, using EasyList, EasyPrivacy and Arch Browser's extra Google tracker rules. This fallback does not replace uBlock Origin Lite and does not guarantee removal of every first-party telemetry request or provide complete fingerprinting protection.
+
+## Browser extensions
+
+- **uBlock Origin Lite** is configured to install automatically and remain managed by the browser.
+- **1Password**, **Bitwarden**, and **Proton VPN** are optional. The start page links directly to their official Chrome Web Store listings; users choose which ones to install and confirm installation in the store.
+- Proton VPN's browser extension protects browser traffic only, not the rest of the computer's applications.
+- Extension policy and browser profile data are stored under the user's XDG configuration and data directories. No system-wide policy file is written.
+
+The full Helium fork of uBlock Origin is not copied into this CEF build. Helium vendors and patches a Manifest V2 uBlock fork inside its own Chromium source tree, including component-loader and resource-build changes. Those patches cannot be applied as a drop-in extension to an unmodified CEF build. Arch Browser uses the official MV3 uBlock Origin Lite project instead; it is related, but it is not feature-identical to full uBlock Origin.
+
+CEF's Chrome runtime is marked experimental upstream. CI compiles and packages the application but does not launch a graphical browser; extension installation, browser chrome and site compatibility still require a manual Ubuntu test.
 
 ## Start page
 
@@ -30,7 +41,7 @@ Still under development:
 
 ## Install on Ubuntu
 
-Download `arch-browser_0.1.1_amd64.deb` and install it with:
+Download `arch-browser_0.1.2_amd64.deb` and install it with:
 
     sudo apt install ./arch-browser_0.1.1_amd64.deb
 
