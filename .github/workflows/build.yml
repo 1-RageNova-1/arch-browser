@@ -71,10 +71,37 @@ jobs:
       - name: Build and inspect Debian package
         run: bash packaging/build-deb.sh
 
-      - name: Upload Debian package
+      - name: Sign Debian package and verify signature
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$(mktemp -d)"
+          chmod 700 "$GNUPGHOME"
+          trap 'rm -rf "$GNUPGHOME"' EXIT
+          printf '%s' "$APT_GPG_PRIVATE_KEY" | gpg --batch --import >/dev/null 2>&1
+          FINGERPRINT="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
+          PACKAGE="dist/arch-browser_0.1.2_amd64.deb"
+          test -s "$PACKAGE"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${APT_GPG_PASSPHRASE:-}" \
+            --local-user "$FINGERPRINT" --armor --detach-sign \
+            --output "$PACKAGE.asc" "$PACKAGE"
+          gpg --batch --verify "$PACKAGE.asc" "$PACKAGE"
+          gpg --batch --armor --export "$FINGERPRINT" > dist/arch-browser-release-key.asc
+          sha256sum "$PACKAGE" > "$PACKAGE.sha256"
+          echo "Debian package signature verified."
+          sha256sum --check "$PACKAGE.sha256"
+
+      - name: Upload signed Debian package and verification files
         uses: actions/upload-artifact@v4
         with:
-          name: arch-browser-deb-amd64
-          path: dist/arch-browser_0.1.2_amd64.deb
+          name: arch-browser-deb-amd64-signed
+          path: |
+            dist/arch-browser_0.1.2_amd64.deb
+            dist/arch-browser_0.1.2_amd64.deb.asc
+            dist/arch-browser_0.1.2_amd64.deb.sha256
+            dist/arch-browser-release-key.asc
           if-no-files-found: error
           retention-days: 30
