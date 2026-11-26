@@ -7,8 +7,6 @@ ARCH="$(dpkg --print-architecture)"
 BUILD_DIR="$ROOT/target/release"
 OUT_DIR="$ROOT/dist"
 
-# Resolve the exact CEF directory selected by cef-dll-sys. Cargo places it
-# according to the build target; it is not guaranteed to sit beside the app.
 CEF_DIR="$(
     find "$ROOT/target/release/build" -type f -name output -print0 \
         | xargs -0 -r grep -hE '^cargo::?metadata=CEF_DIR=' \
@@ -38,17 +36,30 @@ if [[ -z "$CEF_DIR" || ! -s "$CEF_DIR/libcef.so" ]]; then
     exit 1
 fi
 
+FILTER_SOURCE="$PACKAGE_DIR/filter-source"
+mkdir -p "$FILTER_SOURCE"
+curl --fail --location --silent --show-error --retry 3 --connect-timeout 20 --max-time 180 \
+    https://easylist.to/easylist/easylist.txt -o "$FILTER_SOURCE/easylist.txt"
+curl --fail --location --silent --show-error --retry 3 --connect-timeout 20 --max-time 180 \
+    https://easylist.to/easylist/easyprivacy.txt -o "$FILTER_SOURCE/easyprivacy.txt"
+
+for list in easylist.txt easyprivacy.txt; do
+    if [[ ! -s "$FILTER_SOURCE/$list" ]] || ! grep -q '^! Title:' "$FILTER_SOURCE/$list"; then
+        echo "Downloaded filter list $list is empty or has an invalid header." >&2
+        exit 1
+    fi
+done
+
 STAGE="$PACKAGE_DIR/arch-browser"
 LIB_DIR="$STAGE/usr/lib/arch-browser"
+FILTER_DIR="$STAGE/usr/share/arch-browser/filters"
 mkdir -p "$STAGE/DEBIAN" "$LIB_DIR" "$STAGE/usr/bin" \
     "$STAGE/usr/share/applications" \
     "$STAGE/usr/share/icons/hicolor/scalable/apps" \
-    "$STAGE/usr/share/doc/arch-browser"
+    "$STAGE/usr/share/doc/arch-browser" "$FILTER_DIR"
 
 install -m 0755 "$BUILD_DIR/arch-browser" "$LIB_DIR/arch-browser"
 
-
-# Bundle the matching CEF runtime, but not headers, CMake files or build tools.
 shopt -s nullglob
 for pattern in '*.so' '*.so.*' '*.dat' '*.bin' '*.json' '*.pak' chrome-sandbox; do
     for file in "$CEF_DIR"/$pattern; do
@@ -62,8 +73,6 @@ for directory in locales resources Resources swiftshader; do
     fi
 done
 
-# CEF's shared library contains large DWARF debug sections. Keep runtime
-# symbols and unwind information, but drop debug-only sections from the .deb.
 strip --strip-debug "$LIB_DIR/libcef.so"
 
 for required in libcef.so icudtl.dat chrome-sandbox; do
@@ -81,7 +90,8 @@ if ! find "$LIB_DIR" -type f -name '*.pak' -print -quit | grep -q .; then
     exit 1
 fi
 
-# Chromium's Linux sandbox helper must be root-owned and setuid in the package.
+install -m 0644 "$FILTER_SOURCE/easylist.txt" "$FILTER_DIR/easylist.txt"
+install -m 0644 "$FILTER_SOURCE/easyprivacy.txt" "$FILTER_DIR/easyprivacy.txt"
 chmod 4755 "$LIB_DIR/chrome-sandbox"
 
 cat > "$STAGE/usr/bin/arch-browser" <<'LAUNCHER'
@@ -104,12 +114,36 @@ Arch Browser
 
 Launch from the application menu or run: arch-browser
 
-The initial page defaults to https://www.google.com/.
-A startup URL can be supplied with: arch-browser --url=https://example.com/
+The initial page is the animated Arch Browser start page. Search is available
+through Google or DuckDuckGo. Network requests are checked by the bundled
+tracker-blocking engine using the installed EasyList and EasyPrivacy snapshots
+plus Arch Browser's Google tracker rules.
 
-This package includes the matching CEF runtime and locale resources.
+The tracker filters operate at the network-request level. They do not remove
+Chromium/CEF code or promise complete protection against fingerprinting,
+first-party telemetry, or every tracking technique.
 DOC
 gzip -n -9 "$STAGE/usr/share/doc/arch-browser/README.Debian"
+
+cat > "$STAGE/usr/share/doc/arch-browser/FILTER-LISTS.txt" <<'DOC'
+Bundled filter lists
+====================
+
+EasyList
+  https://easylist.to/easylist/easylist.txt
+
+EasyPrivacy
+  https://easylist.to/easylist/easyprivacy.txt
+
+The EasyList and EasyPrivacy lists are maintained by their respective community
+authors. They are distributed under the terms stated by the EasyList project:
+GPL-3.0-or-later or Creative Commons Attribution-ShareAlike 3.0 Unported.
+Attribution: The EasyList authors.
+
+Arch Browser includes additional Google advertising and analytics network
+rules in its own source tree under src/privacy/google-trackers.txt.
+DOC
+gzip -n -9 "$STAGE/usr/share/doc/arch-browser/FILTER-LISTS.txt"
 
 for cef_doc in CREDITS.html LICENSE.txt LICENSE; do
     if [[ -f "$CEF_DIR/$cef_doc" ]]; then
@@ -125,10 +159,9 @@ Priority: optional
 Architecture: amd64
 Maintainer: Arch Browser Contributors
 Depends: libc6 (>= 2.39), libstdc++6, libgcc-s1, libgtk-3-0t64 | libgtk-3-0, libnss3, libnspr4, libatk1.0-0t64 | libatk1.0-0, libatk-bridge2.0-0t64 | libatk-bridge2.0-0, libcups2t64 | libcups2, libdrm2, libxkbcommon0, libgbm1, libasound2t64 | libasound2, libglib2.0-0t64 | libglib2.0-0, libdbus-1-3, libx11-6, libx11-xcb1, libxcb1, libxcb-dri3-0, libxcomposite1, libxdamage1, libxext6, libxfixes3, libxrandr2, libxrender1, libxtst6, libxi6, libxinerama1, libpango-1.0-0, libpangocairo-1.0-0, libfontconfig1, libfreetype6, libwayland-client0, libwayland-egl1, libwayland-cursor0
-Description: Minimalist Chromium desktop browser powered by CEF and Rust
- Arch Browser opens a Chromium-based browser window using the bundled CEF
- runtime. This initial build provides a usable browsing window; further browser
- features remain under development.
+Description: Privacy-focused Chromium desktop browser powered by CEF and Rust
+ Arch Browser opens a Chromium-based browser window with an animated start page
+ and network-level ad and tracker filtering.
 CONTROL
 
 mkdir -p "$OUT_DIR"
@@ -137,7 +170,8 @@ dpkg-deb --build --root-owner-group "$STAGE" "$DEB" >/dev/null
 
 dpkg-deb --info "$DEB"
 dpkg-deb --contents "$DEB" > "$PACKAGE_DIR/deb-contents.txt"
-grep -E 'usr/lib/arch-browser/(libcef|chrome-sandbox|locales/)' "$PACKAGE_DIR/deb-contents.txt" | sed -n '1,12p'
+grep -E 'usr/lib/arch-browser/(libcef|chrome-sandbox|locales/)|usr/share/arch-browser/filters/' \
+    "$PACKAGE_DIR/deb-contents.txt" | sed -n '1,18p'
 
 echo "Built package: $DEB"
 echo "Package size: $(du -h "$DEB" | cut -f1)"

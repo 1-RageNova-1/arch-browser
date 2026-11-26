@@ -23,6 +23,8 @@ pub fn run_main(main_args: &MainArgs, cmd_line: &CommandLine, sandbox_info: *mut
 
     assert_eq!(exit_code, -1, "CEF browser process unexpectedly exited");
 
+    arch_browser::privacy::start();
+
     let mut app = simple_app::SimpleApp::new();
     let settings = Settings {
         no_sandbox: 0,

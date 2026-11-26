@@ -1,12 +1,12 @@
 [package]
 name = "arch-browser"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-description = "Minimalist Chromium desktop browser for Linux, powered by CEF and Rust"
+description = "Privacy-focused minimalist Chromium desktop browser for Linux, powered by CEF and Rust"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/1-RageNova-1/arch-browser"
 readme = "README.md"
-keywords = ["browser", "cef", "chromium", "linux"]
+keywords = ["browser", "cef", "chromium", "linux", "privacy", "adblock"]
 categories = ["gui"]
 
 [lib]
@@ -14,6 +14,7 @@ name = "arch_browser"
 path = "src/lib.rs"
 
 [dependencies]
+adblock = "0.13.6"
 cef = "156.7"
 env_logger = "0.11"
 log = "0.4"

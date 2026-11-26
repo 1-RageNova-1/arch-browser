@@ -1,4 +1,4 @@
-//! CEF browser window following the upstream cef-rs cefsimple Views pattern.
+//! Arch Browser's initial page and CEF browser window.
 use cef::*;
 use std::cell::RefCell;
 
@@ -61,6 +61,13 @@ wrap_app! {
     }
 }
 
+fn homepage_data_url() -> String {
+    let html = include_str!("../homepage.html");
+    let encoded = base64_encode(Some(html.as_bytes()));
+    let encoded = CefString::from(&encoded);
+    format!("data:text/html;base64,{}", encoded.to_string())
+}
+
 wrap_browser_process_handler! {
     struct SimpleBrowserProcessHandler {
         client: RefCell<Option<Client>>,
@@ -73,8 +80,9 @@ wrap_browser_process_handler! {
                 &command_line.switch_value(Some(&CefString::from("url")))
             ).to_string();
 
+            let homepage = homepage_data_url();
             let initial_url = if requested_url.is_empty() {
-                "https://www.google.com/"
+                homepage.as_str()
             } else {
                 requested_url.as_str()
             };

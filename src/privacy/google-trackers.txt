@@ -1,0 +1,19 @@
+! Arch Browser - additional Google advertising and analytics endpoints
+! Network filters only. The EasyList and EasyPrivacy snapshots are installed separately.
+||google-analytics.com^
+||analytics.google.com^
+||googletagmanager.com^
+||googletagservices.com^
+||doubleclick.net^
+||googleadservices.com^
+||googlesyndication.com^
+||adservice.google.com^
+||stats.g.doubleclick.net^
+||securepubads.g.doubleclick.net^
+||pagead2.googlesyndication.com^
+||google.com/pagead/
+||www.google.com/pagead/
+||google.com/ccm/collect
+||www.google.com/ccm/collect
+||google.com/gen_204
+||www.google.com/gen_204

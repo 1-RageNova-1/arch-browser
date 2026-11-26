@@ -21,11 +21,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential clang pkg-config libgtk-3-dev \
+            build-essential clang pkg-config libgtk-3-dev curl dpkg \
             libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
             libcups2 libdrm2 libxkbcommon0 libgbm1 libasound2t64 \
             libx11-xcb1 libxcb-dri3-0 libxcomposite1 libxdamage1 \
-            libxfixes3 libxrandr2 libxrender1 libxtst6 dpkg
+            libxfixes3 libxrandr2 libxrender1 libxtst6
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -46,6 +46,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: arch-browser-deb-amd64
-          path: dist/arch-browser_0.1.0_amd64.deb
+          path: dist/arch-browser_0.1.1_amd64.deb
           if-no-files-found: error
           retention-days: 30
