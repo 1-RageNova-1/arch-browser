@@ -99,7 +99,7 @@ cat > "$STAGE/usr/bin/arch-browser" <<'LAUNCHER'
 set -eu
 APP_DIR="/usr/lib/arch-browser"
 export LD_LIBRARY_PATH="$APP_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-exec "$APP_DIR/arch-browser" "$@"
+exec "$APP_DIR/arch-browser" --enable-chrome-runtime "$@"
 LAUNCHER
 chmod 0755 "$STAGE/usr/bin/arch-browser"
 
