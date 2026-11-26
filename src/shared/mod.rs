@@ -37,6 +37,10 @@ fn prepare_browser_directories() -> std::io::Result<BrowserDirectories> {
     fs::create_dir_all(&managed_policy_dir)?;
     fs::create_dir_all(&profile)?;
 
+    let policy_root = fs::canonicalize(policy_root)?;
+    let root_cache = fs::canonicalize(root_cache)?;
+    let profile = fs::canonicalize(profile)?;
+
     let policy = format!(
         r#"{{
   "ExtensionSettings": {{
