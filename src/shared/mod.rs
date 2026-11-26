@@ -6,11 +6,9 @@ use std::{
     path::PathBuf,
 };
 
-const UBLOCK_ORIGIN_LITE_ID: &str = "ddkjiahejlhfcafbddmgiahcphecmpfh";
-const CHROME_WEB_STORE_UPDATE_URL: &str = "https://clients2.google.com/service/update2/crx";
+const CHROME_POLICY_ROOT: &str = "/etc/opt/arch-browser/policies";
 
 struct BrowserDirectories {
-    policy_root: PathBuf,
     root_cache: PathBuf,
     profile: PathBuf,
 }
@@ -20,47 +18,19 @@ fn prepare_browser_directories() -> std::io::Result<BrowserDirectories> {
         .map(PathBuf::from)
         .unwrap_or(env::current_dir()?);
 
-    let config_home = env::var_os("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home.join(".config"));
-
     let data_home = env::var_os("XDG_DATA_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home.join(".local/share"));
 
-    let app_config = config_home.join("arch-browser");
-    let policy_root = app_config.join("policies");
-    let managed_policy_dir = policy_root.join("managed");
     let root_cache = data_home.join("arch-browser");
     let profile = root_cache.join("profile");
 
-    fs::create_dir_all(&managed_policy_dir)?;
     fs::create_dir_all(&profile)?;
 
-    let policy_root = fs::canonicalize(policy_root)?;
     let root_cache = fs::canonicalize(root_cache)?;
     let profile = fs::canonicalize(profile)?;
 
-    let policy = format!(
-        r#"{{
-  "ExtensionSettings": {{
-    "*": {{
-      "installation_mode": "allowed"
-    }},
-    "{UBLOCK_ORIGIN_LITE_ID}": {{
-      "installation_mode": "force_installed",
-      "update_url": "{CHROME_WEB_STORE_UPDATE_URL}",
-      "toolbar_pin": "force_pinned"
-    }}
-  }}
-}}
-"#
-    );
-
-    fs::write(managed_policy_dir.join("arch-browser-extensions.json"), policy)?;
-
     Ok(BrowserDirectories {
-        policy_root,
         root_cache,
         profile,
     })
@@ -89,7 +59,7 @@ pub fn run_main(main_args: &MainArgs, cmd_line: &CommandLine, sandbox_info: *mut
     assert_eq!(exit_code, -1, "CEF browser process unexpectedly exited");
 
     let directories = prepare_browser_directories()
-        .expect("could not prepare Arch Browser profile and extension policies");
+        .expect("could not prepare Arch Browser profile directories");
 
     arch_browser::privacy::start();
 
@@ -97,9 +67,7 @@ pub fn run_main(main_args: &MainArgs, cmd_line: &CommandLine, sandbox_info: *mut
     let settings = Settings {
         no_sandbox: 0,
         windowless_rendering_enabled: 0,
-        chrome_policy_id: CefString::from(
-            directories.policy_root.to_string_lossy().as_ref(),
-        ),
+        chrome_policy_id: CefString::from(CHROME_POLICY_ROOT),
         root_cache_path: CefString::from(
             directories.root_cache.to_string_lossy().as_ref(),
         ),
@@ -110,8 +78,8 @@ pub fn run_main(main_args: &MainArgs, cmd_line: &CommandLine, sandbox_info: *mut
         ..Default::default()
     };
 
-    log::info!("Starting CEF Chrome runtime with persistent profile");
-    log::info!("uBlock Origin Lite is configured for automatic installation");
+    log::info!("Starting CEF Chrome runtime with managed extension policies");
+    log::info!("uBlock Origin Lite is force-installed and pinned by the Debian package policy");
 
     assert_eq!(
         initialize(Some(main_args), Some(&settings), Some(&mut app), sandbox_info),
