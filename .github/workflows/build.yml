@@ -5,6 +5,10 @@ on:
     branches: [main, "work/**"]
   workflow_dispatch:
 
+concurrency:
+  group: linux-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
