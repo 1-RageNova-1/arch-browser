@@ -24,7 +24,7 @@ wrap_window_delegate! {
             let browser_view = self.browser_view.borrow();
             let Some(browser_view) = browser_view.as_ref() else { return 1; };
             match browser_view.browser() {
-                Some(mut browser) => browser.host().map(|host| host.try_close_browser()).unwrap_or(1),
+                Some(browser) => browser.host().map(|host| host.try_close_browser()).unwrap_or(1),
                 None => 1,
             }
         }
@@ -44,7 +44,7 @@ wrap_browser_process_handler! {
     impl BrowserProcessHandler {
         fn on_context_initialized(&self) {
             let command_line = command_line_get_global().expect("CEF command line unavailable");
-            let requested_url = command_line.switch_value(Some(&CefString::from("url"))).to_string();
+            let requested_url = cef::string::CefStringUtf16::from(&command_line.switch_value(Some(&CefString::from("url")))).to_string();
             let initial_url = if requested_url.is_empty() { "https://www.google.com/" } else { requested_url.as_str() };
             let url = CefString::from(initial_url);
             let settings = BrowserSettings::default();
