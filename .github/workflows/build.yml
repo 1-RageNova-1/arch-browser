@@ -1,70 +1,42 @@
-name: Build Linux
+name: Linux CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main, "work/**"]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test-and-build:
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
+      - uses: actions/checkout@v4
+      - name: Install CEF system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            pkg-config \
-            libgtk-3-dev \
-            libnss3 \
-            libatk-bridge2.0-0 \
-            libdrm2 \
-            libxkbcommon0 \
-            libgbm1 \
-            libasound2t64 || sudo apt-get install -y libasound2
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang pkg-config libgtk-3-dev \
+            libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
+            libcups2 libdrm2 libxkbcommon0 libgbm1 libasound2t64 \
+            libx11-xcb1 libxcb-dri3-0 libxcomposite1 libxdamage1 \
+            libxfixes3 libxrandr2 libxrender1 libxtst6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run unit tests
+        run: cargo test --all-targets
       - name: Check
-        run: cargo check
-
-      - name: Build (release)
-        run: cargo build --release
-        continue-on-error: true   # CEF download / linking can still fail; keep the job informative
-
-      - name: Upload binary (if produced)
+        run: cargo check --all-targets
+      - name: Build release
+        run: cargo build --release --bin arch-browser
+      - name: Upload executable
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: arch-browser-linux
-          path: |
-            target/release/arch-browser
-          if-no-files-found: ignore
+          name: arch-browser-linux-x86_64
+          path: target/release/arch-browser
+          if-no-files-found: error
           retention-days: 7
-
-      - name: Summary
-        run: |
-          echo "### Arch Browser build summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "This workflow only compiles the current skeleton." >> $GITHUB_STEP_SUMMARY
-          echo "It does **not** yet produce a complete, tested browser." >> $GITHUB_STEP_SUMMARY
-          echo "See README.md for the real status of the project." >> $GITHUB_STEP_SUMMARY

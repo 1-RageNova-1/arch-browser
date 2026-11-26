@@ -1,114 +1,87 @@
 # Arch Browser
 
-**Minimalist Chromium-based desktop browser for Linux**, inspired by Arch Linux aesthetics (deep black + lavender).
+Arch Browser is a Linux desktop browser project written in Rust and based on Chromium Embedded Framework (CEF). Its visual direction is inspired by Arch Linux: pure black, lavender accents and compact controls.
 
-> **Status (honest)**  
-> This is an **early experimental skeleton**.  
-> It uses the maintained Rust CEF bindings (`cef` crate from tauri-apps/cef-rs).  
-> It is **not** yet a full-featured browser. Many requested features (tabs UI, bookmarks, history persistence, custom new-tab page, animations, packaging, etc.) are still to be implemented.  
-> No binary has been fully tested as a production browser in this repository yet.
+> **Development status — 26 November 2026:** this repository is under active development. The browser UI and CEF window integration are not yet complete. The current executable is still a placeholder and must not be presented as a usable browser. No release binaries have been validated or published.
 
-Repository: https://github.com/1-RageNova-1/arch-browser
+## Architecture decision: CEF + Rust
 
-## Architecture choice
+The project uses the maintained `cef` crate from [tauri-apps/cef-rs](https://github.com/tauri-apps/cef-rs), rather than an abandoned binding. The crate provides safe Rust wrappers over CEF's C API and targets Linux x86_64 and ARM64. The matching CEF runtime is acquired by `cef-dll-sys` during the build or supplied through `CEF_PATH`.
 
-- **Engine**: Chromium Embedded Framework (CEF)
-- **Language**: Rust
-- **Bindings**: Official maintained crate [`cef`](https://crates.io/crates/cef) (tauri-apps/cef-rs)
-- **Why this stack**: CEF provides a real Chromium browser process model. The `cef` crate is actively maintained and supports Linux x86_64 / ARM64.
+CEF is feasible, but materially more complex than WebKitGTK:
 
-### Known major constraints
+- CEF is multi-process. The executable must call `execute_process` before normal application initialization, initialize CEF only in the browser process, run the CEF message loop, and shut it down cleanly.
+- A distributable needs the CEF runtime and data files, including `libcef.so`, resource `.pak` files, locale data and other version-specific files. A Rust executable alone is not a portable browser.
+- Expect a large download and package footprint (often well above 150 MB, depending on CEF build and compression).
+- Linux display support and Wayland behavior depend on the exact CEF build, Chromium flags and window integration. XWayland is a fallback, not proof of native Wayland support.
+- CEF normally uses multiple child processes. We will not force a single renderer process: that is unsafe and can break isolation. Process count and background services will instead be kept to the minimum supported by Chromium.
 
-| Constraint | Impact |
-|------------|--------|
-| Binary size | Final package usually > 150 MB (libcef + resources) |
-| Multi-process | The same binary must handle browser / renderer / GPU / utility processes |
-| Memory | Higher idle memory than pure WebKitGTK solutions |
-| Wayland | Support depends on CEF version and flags |
-| Packaging | Requires shipping `libcef.so`, `.pak` files, locales, snapshots |
+### Feature ownership
 
-CEF covers natively: navigation, cookies, cache, downloads, request interception (useful for tracker blocking), permissions, pop-up control.  
-UI chrome, tabs management, bookmarks, history, new-tab page, settings and packaging must be built on top.
+| Feature | CEF capability | Arch Browser work |
+|---|---|---|
+| Web navigation and rendering | Native | Browser window, navigation UI and lifecycle |
+| Cookies and cache | Native request-context/storage APIs | Profile management and clear-data UI |
+| Downloads | Native download handler callbacks | Download list, destination and cancellation UI |
+| Private browsing | Separate in-memory request context | Private profile lifecycle and no-persistence guarantees |
+| Permissions | Permission callbacks | Per-origin decisions and persistence |
+| Pop-ups | Lifespan/popup callbacks | Policy and tab/window routing |
+| History and bookmarks | Not a browser UI feature | Rust persistence layer |
+| Tabs and session restore | Browser instances are supported | Tab model, UI and session persistence |
+| Tracker blocking | Request interception is available | Not enabled yet; requires maintained filter lists, update policy and tests |
 
-## Design (target)
+Tracker blocking is explicitly **not implemented yet**. A setting flag is not a blocker; it will only be exposed as functional after request interception and a real rule set are integrated and tested.
 
-- Background: `#000000`
-- Accent: `#A78BFA` (lavender)
-- Text: `#E6DDF5`
-- Minimal, elegant, low chrome
-- Typography: JetBrains Mono for technical elements
+## Current implementation
 
-## Current state of the code
+Implemented in this branch:
+- Rust state model for bookmarks, history and browser settings.
+- JSON state persistence with atomic replacement.
+- Explicit errors for malformed JSON and unsupported state versions.
+- Bookmark JSON import/export and duplicate handling.
+- Automated unit tests for defaults, bookmarks, import/export, history and corrupted state files.
+- CI no longer ignores a failed release build.
 
-- Cargo project using the `cef` crate
-- Basic entry point following the CEF multi-process model
-- Placeholder for future browser window / client handlers
-- GitHub Actions workflow that attempts Linux builds
+Not implemented yet:
+- CEF initialization and a visible browser window.
+- Address/search bar, navigation controls and multi-tab UI.
+- Homepage, wallpapers, logo assets and animations.
+- Downloads, private contexts, cookie/cache controls, permission UI and pop-up policy.
+- Actual tracker filtering.
+- Verified .deb, AppImage and portable archive packaging.
+- End-to-end tests on a graphical Linux desktop.
 
-**What is NOT implemented yet** (explicit list):
+## Build prerequisites (Ubuntu/Debian)
 
-- Real multi-tab UI
-- Address bar + search integration
-- Bookmarks / history persistence
-- Downloads manager
-- Private browsing mode UI
-- Custom new-tab / home page
-- Animations
-- Tracker blocking rules
-- `.deb` / AppImage / portable packaging that has been verified
-- Automated tests covering the full feature set
-
-## Building (local)
-
-You need a machine with more RAM than a minimal container (CEF is heavy).
+Install a recent stable Rust toolchain and the CEF native dependencies:
 
 ```bash
-# 1. Install Rust (stable)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+sudo apt update
+sudo apt install -y build-essential clang pkg-config libgtk-3-dev \
+  libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+  libdrm2 libxkbcommon0 libgbm1 libasound2t64 \
+  libx11-xcb1 libxcb-dri3-0 libxcomposite1 libxdamage1 \
+  libxfixes3 libxrandr2 libxrender1 libxtst6
+```
 
-# 2. Clone
-git clone https://github.com/1-RageNova-1/arch-browser.git
-cd arch-browser
+Build and run the current development binary:
 
-# 3. Export CEF binaries (recommended)
-cargo install export-cef-dir
-export-cef-dir --force $HOME/.local/share/cef
-export CEF_PATH="$HOME/.local/share/cef"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$CEF_PATH"
-
-# 4. Build
+```bash
+cargo test --all-targets
 cargo build --release
-
-# 5. Run (after successful build)
 ./target/release/arch-browser
 ```
 
-Alternative using the helper from cef-rs:
+The current binary is a development placeholder; successful compilation does not mean that web browsing is available.
 
-```bash
-cargo run --bin bundle-cef-app -- . -o target/bundle --release
-```
+## Repository CI
 
-## GitHub Actions
+GitHub Actions runs unit tests, checks all targets and performs a release build on Ubuntu 24.04. Build failures fail the job. A successful CI run proves compilation only; it does not prove GUI startup, external navigation, installation, or runtime CEF resource discovery.
 
-A workflow is present under `.github/workflows/`.  
-It tries to build on `ubuntu-latest`.  
-Success of the workflow does **not** automatically mean the resulting binary is a complete, tested browser. Always verify locally.
+## Release policy
+
+A `v0.1.0` release must not be created until a real CEF browser window can load external HTTPS pages and the .deb, AppImage and portable archive have been built and smoke-tested. Never download or attach an unverified binary as a release asset.
 
 ## License
 
-MIT OR Apache-2.0 (same as the upstream `cef` crate where applicable).
-
-## Contributing / Next steps
-
-Priority order recommended:
-
-1. Make a minimal window that loads a real external URL
-2. Implement basic navigation handlers (load start/end, title, URL changes)
-3. Add a simple native or CEF-based chrome (address bar + back/forward/reload)
-4. Multi-tab support
-5. Persistence layer (bookmarks, history)
-6. Packaging scripts (.deb, AppImage)
-7. Tests and polish
-
-Pull requests welcome. Please keep the README honest about what works and what does not.
+MIT OR Apache-2.0.
