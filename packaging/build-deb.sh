@@ -53,7 +53,9 @@ done
 STAGE="$PACKAGE_DIR/arch-browser"
 LIB_DIR="$STAGE/usr/lib/arch-browser"
 FILTER_DIR="$STAGE/usr/share/arch-browser/filters"
+POLICY_DIR="$STAGE/etc/opt/arch-browser/policies/managed"
 mkdir -p "$STAGE/DEBIAN" "$LIB_DIR" "$STAGE/usr/bin" \
+    "$POLICY_DIR" \
     "$STAGE/usr/share/applications" \
     "$STAGE/usr/share/icons/hicolor/scalable/apps" \
     "$STAGE/usr/share/doc/arch-browser" "$FILTER_DIR"
@@ -92,6 +94,22 @@ fi
 
 install -m 0644 "$FILTER_SOURCE/easylist.txt" "$FILTER_DIR/easylist.txt"
 install -m 0644 "$FILTER_SOURCE/easyprivacy.txt" "$FILTER_DIR/easyprivacy.txt"
+
+cat > "$POLICY_DIR/arch-browser-extensions.json" <<'POLICY'
+{
+  "ExtensionSettings": {
+    "*": {
+      "installation_mode": "allowed"
+    },
+    "ddkjiahejlhfcafbddmgiahcphecmpfh": {
+      "installation_mode": "force_installed",
+      "update_url": "https://clients2.google.com/service/update2/crx",
+      "toolbar_pin": "force_pinned"
+    }
+  }
+}
+POLICY
+chmod 0644 "$POLICY_DIR/arch-browser-extensions.json"
 chmod 4755 "$LIB_DIR/chrome-sandbox"
 
 cat > "$STAGE/usr/bin/arch-browser" <<'LAUNCHER'
