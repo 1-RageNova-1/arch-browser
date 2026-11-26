@@ -96,7 +96,6 @@ pub fn run_main(main_args: &MainArgs, cmd_line: &CommandLine, sandbox_info: *mut
     let settings = Settings {
         no_sandbox: 0,
         windowless_rendering_enabled: 0,
-        chrome_runtime: 1,
         chrome_policy_id: CefString::from(
             directories.policy_root.to_string_lossy().as_ref(),
         ),
