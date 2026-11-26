@@ -14,7 +14,7 @@ The Helium fork is GPL-3.0 and is designed for Helium's own Chromium source tree
 
 ## Default blocker
 
-Arch Browser's Debian launcher adds `--enable-chrome-runtime`; the app sets an application-specific Chrome policy directory under the current user's XDG configuration directory. The managed policy force-installs the official uBlock Origin Lite extension from the Chrome Web Store:
+Arch Browser's Debian launcher adds `--enable-chrome-runtime`. The package installs the managed policy in `/etc/opt/arch-browser/policies/managed/arch-browser-extensions.json`, owned by root and not writable by ordinary users. CEF reads the policy root `/etc/opt/arch-browser/policies`; the browser profile itself remains under the user's XDG data directory. The managed policy force-installs the official uBlock Origin Lite extension from the Chrome Web Store:
 
 - Extension ID: `ddkjiahejlhfcafbddmgiahcphecmpfh`
 - Store listing: https://chromewebstore.google.com/detail/ublock-origin-lite/ddkjiahejlhfcafbddmgiahcphecmpfh
