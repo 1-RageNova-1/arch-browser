@@ -5,8 +5,22 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${VERSION:-$(awk -F '"' '/^version = / { print $2; exit }' "$ROOT/Cargo.toml")}"
 ARCH="$(dpkg --print-architecture)"
 BUILD_DIR="$ROOT/target/release"
-CEF_DIR="$BUILD_DIR"
 OUT_DIR="$ROOT/dist"
+
+# Resolve the exact CEF directory selected by cef-dll-sys. Cargo places it
+# according to the build target; it is not guaranteed to sit beside the app.
+CEF_DIR="$(
+    find "$ROOT/target/release/build" -type f -name output -print0 \
+        | xargs -0 -r grep -hE '^cargo::?metadata=CEF_DIR=' \
+        | sed -E 's/^cargo::?metadata=CEF_DIR=//' \
+        | tail -n 1
+)"
+if [[ -z "$CEF_DIR" || ! -d "$CEF_DIR" || ! -s "$CEF_DIR/libcef.so" ]]; then
+    CEF_FILE="$(find -L "$ROOT/target" -name libcef.so -print -quit)"
+    if [[ -n "$CEF_FILE" ]]; then
+        CEF_DIR="$(dirname "$CEF_FILE")"
+    fi
+fi
 PACKAGE_DIR="$(mktemp -d)"
 trap 'rm -rf "$PACKAGE_DIR"' EXIT
 
@@ -19,8 +33,8 @@ if [[ ! -x "$BUILD_DIR/arch-browser" ]]; then
     echo "Release executable missing: $BUILD_DIR/arch-browser" >&2
     exit 1
 fi
-if [[ ! -s "$CEF_DIR/libcef.so" ]]; then
-    echo "CEF runtime was not copied beside the release executable." >&2
+if [[ -z "$CEF_DIR" || ! -s "$CEF_DIR/libcef.so" ]]; then
+    echo "Could not locate the CEF runtime selected by cef-dll-sys." >&2
     exit 1
 fi
 
