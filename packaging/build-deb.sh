@@ -92,6 +92,12 @@ This package includes the matching CEF runtime and locale resources.
 DOC
 gzip -n -9 "$STAGE/usr/share/doc/arch-browser/README.Debian"
 
+for cef_doc in CREDITS.html LICENSE.txt LICENSE; do
+    if [[ -f "$CEF_DIR/$cef_doc" ]]; then
+        install -m 0644 "$CEF_DIR/$cef_doc" "$STAGE/usr/share/doc/arch-browser/cef-$cef_doc"
+    fi
+done
+
 cat > "$STAGE/DEBIAN/control" <<CONTROL
 Package: arch-browser
 Version: $VERSION
@@ -112,7 +118,7 @@ dpkg-deb --build --root-owner-group "$STAGE" "$DEB" >/dev/null
 
 dpkg-deb --info "$DEB"
 dpkg-deb --contents "$DEB" > "$PACKAGE_DIR/deb-contents.txt"
-grep -E 'usr/lib/arch-browser/(libcef\\.so|chrome-sandbox|locales/)' "$PACKAGE_DIR/deb-contents.txt" | sed -n '1,12p'
+grep -E 'usr/lib/arch-browser/(libcef|chrome-sandbox|locales/)' "$PACKAGE_DIR/deb-contents.txt" | sed -n '1,12p'
 
 echo "Built package: $DEB"
 echo "Package size: $(du -h "$DEB" | cut -f1)"
