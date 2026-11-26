@@ -19,6 +19,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate release signing key without exposing it
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${APT_GPG_PRIVATE_KEY:-}" ]]; then
+            echo "::error::APT_GPG_PRIVATE_KEY is missing from repository Actions secrets."
+            exit 1
+          fi
+          export GNUPGHOME="$(mktemp -d)"
+          chmod 700 "$GNUPGHOME"
+          trap 'rm -rf "$GNUPGHOME"' EXIT
+          printf '%s' "$APT_GPG_PRIVATE_KEY" | gpg --batch --import >/dev/null 2>&1
+          FINGERPRINT="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
+          if [[ -z "$FINGERPRINT" ]]; then
+            echo "::error::The configured secret did not import a usable private signing key."
+            exit 1
+          fi
+          printf 'Arch Browser signing-key validation probe\n' > "$RUNNER_TEMP/signing-probe.txt"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${APT_GPG_PASSPHRASE:-}" \
+            --local-user "$FINGERPRINT" --armor --detach-sign \
+            --output "$RUNNER_TEMP/signing-probe.txt.asc" "$RUNNER_TEMP/signing-probe.txt"
+          gpg --batch --verify "$RUNNER_TEMP/signing-probe.txt.asc" "$RUNNER_TEMP/signing-probe.txt"
+          echo "A usable Arch Browser private signing key and passphrase are configured."
+
       - name: Install CEF build dependencies
         run: |
           sudo apt-get update
