@@ -44,6 +44,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: arch-browser-deb-amd64
-          path: dist/arch-browser_0.1.1_amd64.deb
+          path: dist/arch-browser_0.1.2_amd64.deb
           if-no-files-found: error
           retention-days: 30
