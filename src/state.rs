@@ -38,7 +38,7 @@ impl Default for BrowserSettings {
             search_engine: "https://duckduckgo.com/?q={query}".into(),
             restore_tabs: true,
             block_popups: true,
-            block_trackers: false,
+            block_trackers: true,
             animations: true,
             homepage: "arch://newtab".into(),
         }
@@ -185,7 +185,7 @@ mod tests {
         let settings = BrowserSettings::default();
         assert_eq!(settings.homepage, "arch://newtab");
         assert!(settings.block_popups);
-        assert!(!settings.block_trackers);
+        assert!(settings.block_trackers);
     }
 
     #[test]
