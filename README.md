@@ -43,11 +43,11 @@ Still under development:
 
 Download `arch-browser_0.1.2_amd64.deb` and install it with:
 
-    sudo apt install ./arch-browser_0.1.1_amd64.deb
+    sudo apt install ./arch-browser_0.1.2_amd64.deb
 
 Launch Arch Browser from the applications menu or run `arch-browser` in a terminal.
 
-The Debian package contains the matching CEF runtime, Chromium resources, locales, sandbox helper, and EasyList/EasyPrivacy snapshots. It also installs the application launcher and desktop icon. The package targets Ubuntu 24.04 and newer x86_64 systems; it is not an ARM build.
+The Debian package contains the matching CEF runtime, Chromium resources, locales, sandbox helper, and EasyList/EasyPrivacy snapshots. See [extension integration](docs/EXTENSIONS.md) and [release signing](docs/RELEASE_SIGNING.md) for details. It also installs the application launcher and desktop icon. The package targets Ubuntu 24.04 and newer x86_64 systems; it is not an ARM build.
 
 ## Development
 
