@@ -46,7 +46,7 @@ wrap_window_delegate! {
         }
 
         fn window_runtime_style(&self) -> RuntimeStyle {
-            RuntimeStyle::DEFAULT
+            RuntimeStyle::CHROME
         }
     }
 }
