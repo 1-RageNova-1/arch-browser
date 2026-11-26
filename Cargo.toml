@@ -1,0 +1,21 @@
+[package]
+name = "arch-browser"
+version = "0.1.0"
+edition = "2021"
+description = "Minimalist Chromium-based desktop browser for Linux (CEF + Rust)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/1-RageNova-1/arch-browser"
+readme = "README.md"
+keywords = ["browser", "cef", "chromium", "linux"]
+categories = ["gui"]
+
+[dependencies]
+cef = "156"
+log = "0.4"
+env_logger = "0.11"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
