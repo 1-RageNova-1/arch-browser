@@ -46,6 +46,7 @@ jobs:
           set -euo pipefail
           xvfb-run -a -s "-screen 0 1280x900x24" bash -euo pipefail <<'BASH'
           cd target/release
+          export LD_LIBRARY_PATH="$PWD${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           ./arch-browser --url=https://example.com/ --remote-debugging-port=9222 --disable-gpu --no-sandbox > /tmp/arch-browser-smoke.log 2>&1 &
           app_pid=$!
           cleanup() {
@@ -96,11 +97,18 @@ jobs:
           mkdir -p dist/arch-browser
           cp target/release/arch-browser dist/arch-browser/
           cp -a "$output_file"/. dist/arch-browser/
+          cat > dist/arch-browser/run-arch-browser <<'EOF'
+          #!/bin/sh
+          HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          export LD_LIBRARY_PATH="$HERE${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          exec "$HERE/arch-browser" "$@"
+          EOF
+          chmod +x dist/arch-browser/run-arch-browser
           cat > dist/arch-browser/README.txt <<'EOF'
           Arch Browser portable Linux build
           ==================================
-          Run ./arch-browser from this directory.
-          Keep the CEF runtime files and locales directory beside the executable.
+          Run ./run-arch-browser from this directory.
+          Keep the CEF runtime files and locales directory beside the launcher.
           This is a development build, not a signed distro package.
           EOF
           tar -C dist -czf dist/arch-browser-linux-x86_64.tar.gz arch-browser
