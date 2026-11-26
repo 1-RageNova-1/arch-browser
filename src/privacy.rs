@@ -7,7 +7,7 @@ use adblock::{
 };
 use std::{
     fs,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
         mpsc::{self, SyncSender, TrySendError},
         OnceLock,
@@ -102,8 +102,8 @@ pub fn should_block(url: &str, source_url: &str, request_type: &str, method: &st
 fn load_engine() -> Engine {
     let mut filter_set = FilterSet::new(false);
     let directory = std::env::var_os("ARCH_BROWSER_FILTERS_DIR")
-        .map(Into::into)
-        .unwrap_or_else(|| FILTER_DIRECTORY.into());
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(FILTER_DIRECTORY));
 
     let easylist_loaded = add_filter_file(&mut filter_set, &directory, "easylist.txt");
     let easyprivacy_loaded = add_filter_file(&mut filter_set, &directory, "easyprivacy.txt");
