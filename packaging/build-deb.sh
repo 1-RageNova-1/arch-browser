@@ -109,6 +109,8 @@ cat > "$POLICY_DIR/arch-browser-extensions.json" <<'POLICY'
   }
 }
 POLICY
+chmod 0755 "$STAGE/etc" "$STAGE/etc/opt" "$STAGE/etc/opt/arch-browser" \
+    "$STAGE/etc/opt/arch-browser/policies" "$POLICY_DIR"
 chmod 0644 "$POLICY_DIR/arch-browser-extensions.json"
 chmod 4755 "$LIB_DIR/chrome-sandbox"
 
@@ -188,8 +190,14 @@ dpkg-deb --build --root-owner-group "$STAGE" "$DEB" >/dev/null
 
 dpkg-deb --info "$DEB"
 dpkg-deb --contents "$DEB" > "$PACKAGE_DIR/deb-contents.txt"
-grep -E 'usr/lib/arch-browser/(libcef|chrome-sandbox|locales/)|usr/share/arch-browser/filters/' \
-    "$PACKAGE_DIR/deb-contents.txt" | sed -n '1,18p'
+grep -E 'usr/lib/arch-browser/(libcef|chrome-sandbox|locales/)|usr/share/arch-browser/filters/|etc/opt/arch-browser/policies/managed/' \
+    "$PACKAGE_DIR/deb-contents.txt" | sed -n '1,24p'
+
+POLICY_ENTRY="$(grep -F 'etc/opt/arch-browser/policies/managed/arch-browser-extensions.json' "$PACKAGE_DIR/deb-contents.txt" || true)"
+if [[ -z "$POLICY_ENTRY" || "$POLICY_ENTRY" != *"root/root"* || "$POLICY_ENTRY" != *"-rw-r--r--"* ]]; then
+    echo "The managed extension policy is missing or is not root-owned and read-only to ordinary users." >&2
+    exit 1
+fi
 
 echo "Built package: $DEB"
 echo "Package size: $(du -h "$DEB" | cut -f1)"
