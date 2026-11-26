@@ -13,7 +13,7 @@ The existing [Brave adblock-rust](https://github.com/brave/adblock-rust) network
 - **uBlock Origin Lite** is configured to install automatically and remain managed by the browser.
 - **1Password**, **Bitwarden**, and **Proton VPN** are optional. The start page links directly to their official Chrome Web Store listings; users choose which ones to install and confirm installation in the store.
 - Proton VPN's browser extension protects browser traffic only, not the rest of the computer's applications.
-- Extension policy and browser profile data are stored under the user's XDG configuration and data directories. No system-wide policy file is written.
+- The managed extension policy is installed as a root-owned file under `/etc/opt/arch-browser/policies/managed/`; the persistent browser profile is stored under the user's XDG data directory.
 
 The full Helium fork of uBlock Origin is not copied into this CEF build. Helium vendors and patches a Manifest V2 uBlock fork inside its own Chromium source tree, including component-loader and resource-build changes. Those patches cannot be applied as a drop-in extension to an unmodified CEF build. Arch Browser uses the official MV3 uBlock Origin Lite project instead; it is related, but it is not feature-identical to full uBlock Origin.
 
