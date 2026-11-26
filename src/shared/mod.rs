@@ -49,7 +49,8 @@ fn prepare_browser_directories() -> std::io::Result<BrowserDirectories> {
     }},
     "{UBLOCK_ORIGIN_LITE_ID}": {{
       "installation_mode": "force_installed",
-      "update_url": "{CHROME_WEB_STORE_UPDATE_URL}"
+      "update_url": "{CHROME_WEB_STORE_UPDATE_URL}",
+      "toolbar_pin": "force_pinned"
     }}
   }}
 }}
