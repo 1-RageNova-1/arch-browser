@@ -1,0 +1,73 @@
+name: Signed Linux release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-sign-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CEF build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang pkg-config libgtk-3-dev curl dpkg \
+            libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
+            libcups2 libdrm2 libxkbcommon0 libgbm1 libasound2t64 \
+            libx11-xcb1 libxcb-dri3-0 libxcomposite1 libxdamage1 \
+            libxfixes3 libxrandr2 libxrender1 libxtst6 gnupg
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: cargo test --all-targets
+
+      - name: Build release executable
+        run: cargo build --release --bin arch-browser
+
+      - name: Build Debian package
+        run: bash packaging/build-deb.sh
+
+      - name: Sign package and export verification key
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          : "${APT_GPG_PRIVATE_KEY:?Missing APT_GPG_PRIVATE_KEY repository secret}"
+          mkdir -m 700 "$RUNNER_TEMP/gnupg"
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          printf '%s' "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
+          FINGERPRINT="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
+          test -n "$FINGERPRINT"
+          DEB="$(find dist -maxdepth 1 -type f -name 'arch-browser_*_amd64.deb' -print -quit)"
+          test -n "$DEB"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$APT_GPG_PASSPHRASE" \
+            --local-user "$FINGERPRINT" --armor --detach-sign "$DEB"
+          gpg --batch --yes --output dist/arch-browser-signing-key.gpg \
+            --export "$FINGERPRINT"
+          (
+            cd dist
+            sha256sum "$(basename "$DEB")" "$(basename "$DEB").asc" arch-browser-signing-key.gpg > SHA256SUMS
+          )
+          echo "Release signature created with key $FINGERPRINT"
+
+      - name: Publish signed GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.deb
+            dist/*.deb.asc
+            dist/arch-browser-signing-key.gpg
+            dist/SHA256SUMS

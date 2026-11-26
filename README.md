@@ -1,114 +1,67 @@
 # Arch Browser
 
-**Minimalist Chromium-based desktop browser for Linux**, inspired by Arch Linux aesthetics (deep black + lavender).
+Arch Browser is a Rust desktop browser powered by Chromium Embedded Framework (CEF). Its visual direction is inspired by Arch Linux: deep black surfaces, lavender accents and a compact animated start page.
 
-> **Status (honest)**  
-> This is an **early experimental skeleton**.  
-> It uses the maintained Rust CEF bindings (`cef` crate from tauri-apps/cef-rs).  
-> It is **not** yet a full-featured browser. Many requested features (tabs UI, bookmarks, history persistence, custom new-tab page, animations, packaging, etc.) are still to be implemented.  
-> No binary has been fully tested as a production browser in this repository yet.
+## Privacy protection
 
-Repository: https://github.com/1-RageNova-1/arch-browser
+Arch Browser enables the CEF Chrome runtime and configures the official **uBlock Origin Lite** extension for automatic installation at first launch. It is the Manifest V3 version maintained by Raymond Hill. Its default rules include uBlock's built-in lists, EasyList, EasyPrivacy and Peter Lowe's ad/tracking server list. The extension is force-installed through a per-user Chromium policy that points to the official Chrome Web Store update service.
 
-## Architecture choice
+The existing [Brave adblock-rust](https://github.com/brave/adblock-rust) network filter remains as an additional request-level layer, using EasyList, EasyPrivacy and Arch Browser's extra Google tracker rules. This fallback does not replace uBlock Origin Lite and does not guarantee removal of every first-party telemetry request or provide complete fingerprinting protection.
 
-- **Engine**: Chromium Embedded Framework (CEF)
-- **Language**: Rust
-- **Bindings**: Official maintained crate [`cef`](https://crates.io/crates/cef) (tauri-apps/cef-rs)
-- **Why this stack**: CEF provides a real Chromium browser process model. The `cef` crate is actively maintained and supports Linux x86_64 / ARM64.
+## Browser extensions
 
-### Known major constraints
+- **uBlock Origin Lite** is configured to install automatically and remain managed by the browser.
+- **1Password**, **Bitwarden**, and **Proton VPN** are optional. The start page links directly to their official Chrome Web Store listings; users choose which ones to install and confirm installation in the store.
+- Proton VPN's browser extension protects browser traffic only, not the rest of the computer's applications.
+- The managed extension policy is installed as a root-owned file under `/etc/opt/arch-browser/policies/managed/`; the persistent browser profile is stored under the user's XDG data directory.
 
-| Constraint | Impact |
-|------------|--------|
-| Binary size | Final package usually > 150 MB (libcef + resources) |
-| Multi-process | The same binary must handle browser / renderer / GPU / utility processes |
-| Memory | Higher idle memory than pure WebKitGTK solutions |
-| Wayland | Support depends on CEF version and flags |
-| Packaging | Requires shipping `libcef.so`, `.pak` files, locales, snapshots |
+The full Helium fork of uBlock Origin is not copied into this CEF build. Helium vendors and patches a Manifest V2 uBlock fork inside its own Chromium source tree, including component-loader and resource-build changes. Those patches cannot be applied as a drop-in extension to an unmodified CEF build. Arch Browser uses the official MV3 uBlock Origin Lite project instead; it is related, but it is not feature-identical to full uBlock Origin.
 
-CEF covers natively: navigation, cookies, cache, downloads, request interception (useful for tracker blocking), permissions, pop-up control.  
-UI chrome, tabs management, bookmarks, history, new-tab page, settings and packaging must be built on top.
+CEF's Chrome runtime is marked experimental upstream. CI compiles and packages the application but does not launch a graphical browser; extension installation, browser chrome and site compatibility still require a manual Ubuntu test.
 
-## Design (target)
+## Start page
 
-- Background: `#000000`
-- Accent: `#A78BFA` (lavender)
-- Text: `#E6DDF5`
-- Minimal, elegant, low chrome
-- Typography: JetBrains Mono for technical elements
+The first page now uses an Arch-themed animated start page with a search field. Google remains available as a search option, and DuckDuckGo is also provided. The animation respects the operating system's reduced-motion preference.
 
-## Current state of the code
+## Current state
 
-- Cargo project using the `cef` crate
-- Basic entry point following the CEF multi-process model
-- Placeholder for future browser window / client handlers
-- GitHub Actions workflow that attempts Linux builds
+Implemented:
+- CEF browser window and Chromium page rendering.
+- Animated start page with Google and DuckDuckGo search.
+- Network-level filtering through adblock-rust.
+- EasyList, EasyPrivacy and extra Google tracker filters.
+- Persistent Rust state model for bookmarks/history (the browser UI for these is not yet connected).
 
-**What is NOT implemented yet** (explicit list):
+Still under development:
+- Browser tab strip and full address/navigation toolbar.
+- Bookmark and history panels.
+- Downloads UI and private profiles.
+- Permission controls and a polished settings panel.
+- Cosmetic filter injection and scriptlet-based protections.
 
-- Real multi-tab UI
-- Address bar + search integration
-- Bookmarks / history persistence
-- Downloads manager
-- Private browsing mode UI
-- Custom new-tab / home page
-- Animations
-- Tracker blocking rules
-- `.deb` / AppImage / portable packaging that has been verified
-- Automated tests covering the full feature set
+## Install on Ubuntu
 
-## Building (local)
+Download `arch-browser_0.1.2_amd64.deb` and install it with:
 
-You need a machine with more RAM than a minimal container (CEF is heavy).
+    sudo apt install ./arch-browser_0.1.2_amd64.deb
 
-```bash
-# 1. Install Rust (stable)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+Launch Arch Browser from the applications menu or run `arch-browser` in a terminal.
 
-# 2. Clone
-git clone https://github.com/1-RageNova-1/arch-browser.git
-cd arch-browser
+The Debian package contains the matching CEF runtime, Chromium resources, locales, sandbox helper, and EasyList/EasyPrivacy snapshots. See [extension integration](docs/EXTENSIONS.md) and [release signing](docs/RELEASE_SIGNING.md) for details. It also installs the application launcher and desktop icon. The package targets Ubuntu 24.04 and newer x86_64 systems; it is not an ARM build.
 
-# 3. Export CEF binaries (recommended)
-cargo install export-cef-dir
-export-cef-dir --force $HOME/.local/share/cef
-export CEF_PATH="$HOME/.local/share/cef"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$CEF_PATH"
+## Development
 
-# 4. Build
-cargo build --release
+Install the native dependencies and a recent stable Rust toolchain, then run:
 
-# 5. Run (after successful build)
-./target/release/arch-browser
-```
+    cargo test --all-targets
+    cargo check --all-targets
+    cargo build --release --bin arch-browser
+    packaging/build-deb.sh
 
-Alternative using the helper from cef-rs:
+The CI workflow runs those tests and build steps and creates the .deb. It deliberately does not launch a graphical browser process; interactive startup and navigation are tested manually on Ubuntu.
 
-```bash
-cargo run --bin bundle-cef-app -- . -o target/bundle --release
-```
-
-## GitHub Actions
-
-A workflow is present under `.github/workflows/`.  
-It tries to build on `ubuntu-latest`.  
-Success of the workflow does **not** automatically mean the resulting binary is a complete, tested browser. Always verify locally.
+CEF is multi-process. The executable calls `execute_process` before browser-process initialization and runs CEF's message loop. The package ships the matching CEF runtime and data packs beside the executable.
 
 ## License
 
-MIT OR Apache-2.0 (same as the upstream `cef` crate where applicable).
-
-## Contributing / Next steps
-
-Priority order recommended:
-
-1. Make a minimal window that loads a real external URL
-2. Implement basic navigation handlers (load start/end, title, URL changes)
-3. Add a simple native or CEF-based chrome (address bar + back/forward/reload)
-4. Multi-tab support
-5. Persistence layer (bookmarks, history)
-6. Packaging scripts (.deb, AppImage)
-7. Tests and polish
-
-Pull requests welcome. Please keep the README honest about what works and what does not.
+MIT OR Apache-2.0. Bundled CEF and filter lists retain their respective upstream licenses; see `/usr/share/doc/arch-browser/` after installation.
