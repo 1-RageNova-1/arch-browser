@@ -111,7 +111,8 @@ DEB="$OUT_DIR/arch-browser_${VERSION}_amd64.deb"
 dpkg-deb --build --root-owner-group "$STAGE" "$DEB" >/dev/null
 
 dpkg-deb --info "$DEB"
-dpkg-deb --contents "$DEB" | grep -E 'usr/lib/arch-browser/(libcef\.so|chrome-sandbox|locales/)' | head -n 12
+dpkg-deb --contents "$DEB" > "$PACKAGE_DIR/deb-contents.txt"
+grep -E 'usr/lib/arch-browser/(libcef\\.so|chrome-sandbox|locales/)' "$PACKAGE_DIR/deb-contents.txt" | sed -n '1,12p'
 
 echo "Built package: $DEB"
 echo "Package size: $(du -h "$DEB" | cut -f1)"
