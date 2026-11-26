@@ -44,36 +44,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          xvfb-run -a -s "-screen 0 1280x900x24" bash -euo pipefail <<'BASH'
           cd target/release
-          xvfb-run -a -s "-screen 0 1280x900x24" bash -euo pipefail -c '
-            ./arch-browser --url=https://example.com/ --remote-debugging-port=9222 --disable-gpu --no-sandbox > /tmp/arch-browser-smoke.log 2>&1 &
-            app_pid=$!
-            cleanup() {
-              kill "$app_pid" 2>/dev/null || true
-              wait "$app_pid" 2>/dev/null || true
-            }
-            trap cleanup EXIT
+          ./arch-browser --url=https://example.com/ --remote-debugging-port=9222 --disable-gpu --no-sandbox > /tmp/arch-browser-smoke.log 2>&1 &
+          app_pid=$!
+          cleanup() {
+            kill "$app_pid" 2>/dev/null || true
+            wait "$app_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
 
-            ready=0
-            for attempt in $(seq 1 40); do
-              if curl --silent --fail http://127.0.0.1:9222/json/list -o /tmp/arch-browser-targets.json; then
-                ready=1
-                break
-              fi
-              if ! kill -0 "$app_pid" 2>/dev/null; then
-                cat /tmp/arch-browser-smoke.log
-                exit 1
-              fi
-              sleep 1
-            done
-
-            if [ "$ready" -ne 1 ]; then
+          ready=0
+          for attempt in $(seq 1 40); do
+            if curl --silent --fail http://127.0.0.1:9222/json/list -o /tmp/arch-browser-targets.json; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$app_pid" 2>/dev/null; then
               cat /tmp/arch-browser-smoke.log
-              echo "CEF remote debugging endpoint did not become ready"
               exit 1
             fi
+            sleep 1
+          done
 
-            python3 - <<'PY'
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/arch-browser-smoke.log
+            echo "CEF remote debugging endpoint did not become ready"
+            exit 1
+          fi
+
+          python3 - <<'PY'
           import json
           from pathlib import Path
           targets = json.loads(Path("/tmp/arch-browser-targets.json").read_text())
@@ -82,7 +82,7 @@ jobs:
               raise SystemExit(f"CEF started but expected page target was not found: {targets!r}")
           print("CEF smoke test passed: browser page target is available.")
           PY
-          '
+          BASH
 
       - name: Assemble portable runtime archive
         shell: bash
