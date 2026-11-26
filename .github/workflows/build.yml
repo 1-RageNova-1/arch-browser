@@ -11,13 +11,13 @@ permissions:
   contents: read
 
 jobs:
-  test-and-build:
+  test-and-package:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install CEF system dependencies
+      - name: Install CEF build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -25,8 +25,7 @@ jobs:
             libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
             libcups2 libdrm2 libxkbcommon0 libgbm1 libasound2t64 \
             libx11-xcb1 libxcb-dri3-0 libxcomposite1 libxdamage1 \
-            libxfixes3 libxrandr2 libxrender1 libxtst6 \
-            xvfb xauth curl
+            libxfixes3 libxrandr2 libxrender1 libxtst6 dpkg
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -34,90 +33,19 @@ jobs:
       - name: Run unit tests
         run: cargo test --all-targets
 
-      - name: Check
+      - name: Check all targets
         run: cargo check --all-targets
 
-      - name: Build release
+      - name: Build release executable
         run: cargo build --release --bin arch-browser
 
-      - name: Smoke-test CEF startup and browser target
-        shell: bash
-        run: |
-          set -euo pipefail
-          xvfb-run -a -s "-screen 0 1280x900x24" bash -euo pipefail <<'BASH'
-          cd target/release
-          export LD_LIBRARY_PATH="$PWD${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-          ./arch-browser --url=https://example.com/ --remote-debugging-port=9222 --disable-gpu --no-sandbox > /tmp/arch-browser-smoke.log 2>&1 &
-          app_pid=$!
-          cleanup() {
-            kill "$app_pid" 2>/dev/null || true
-            wait "$app_pid" 2>/dev/null || true
-          }
-          trap cleanup EXIT
+      - name: Build and inspect Debian package
+        run: packaging/build-deb.sh
 
-          ready=0
-          for attempt in $(seq 1 40); do
-            if curl --silent --fail http://127.0.0.1:9222/json/list -o /tmp/arch-browser-targets.json; then
-              ready=1
-              break
-            fi
-            if ! kill -0 "$app_pid" 2>/dev/null; then
-              cat /tmp/arch-browser-smoke.log
-              exit 1
-            fi
-            sleep 1
-          done
-
-          if [ "$ready" -ne 1 ]; then
-            cat /tmp/arch-browser-smoke.log
-            echo "CEF remote debugging endpoint did not become ready"
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          targets = json.loads(Path("/tmp/arch-browser-targets.json").read_text())
-          pages = [item for item in targets if item.get("type") == "page"]
-          if not any(item.get("url", "").startswith("https://example.com/") for item in pages):
-              raise SystemExit(f"CEF started but expected page target was not found: {targets!r}")
-          print("CEF smoke test passed: browser page target is available.")
-          PY
-          BASH
-
-      - name: Assemble portable runtime archive
-        shell: bash
-        run: |
-          set -euo pipefail
-          output_file="$(find target/release/build -path '*/output' -type f -print0 | xargs -0 grep -h '^cargo:metadata=CEF_DIR=' | tail -n1 | cut -d= -f3-)"
-          if [ -z "$output_file" ] || [ ! -d "$output_file" ]; then
-            echo "Could not locate the CEF runtime directory reported by cef-dll-sys"
-            exit 1
-          fi
-          mkdir -p dist/arch-browser
-          cp target/release/arch-browser dist/arch-browser/
-          cp -a "$output_file"/. dist/arch-browser/
-          cat > dist/arch-browser/run-arch-browser <<'EOF'
-          #!/bin/sh
-          HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-          export LD_LIBRARY_PATH="$HERE${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-          exec "$HERE/arch-browser" "$@"
-          EOF
-          chmod +x dist/arch-browser/run-arch-browser
-          cat > dist/arch-browser/README.txt <<'EOF'
-          Arch Browser portable Linux build
-          ==================================
-          Run ./run-arch-browser from this directory.
-          Keep the CEF runtime files and locales directory beside the launcher.
-          This is a development build, not a signed distro package.
-          EOF
-          tar -C dist -czf dist/arch-browser-linux-x86_64.tar.gz arch-browser
-          test -s dist/arch-browser-linux-x86_64.tar.gz
-
-      - name: Upload portable runtime archive
+      - name: Upload Debian package
         uses: actions/upload-artifact@v4
         with:
-          name: arch-browser-linux-x86_64
-          path: dist/arch-browser-linux-x86_64.tar.gz
+          name: arch-browser-deb-amd64
+          path: dist/arch-browser_0.1.0_amd64.deb
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30

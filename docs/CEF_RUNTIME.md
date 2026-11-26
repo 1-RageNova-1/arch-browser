@@ -1,9 +1,9 @@
-# CEF runtime and first graphical milestone
+# CEF runtime and Debian packaging
 
-The application now uses the upstream cef-rs process lifecycle and CEF Views API to create a native Chromium browser window on Linux. It launches the default start page or a URL supplied with --url=https://example.com.
+Arch Browser starts CEF through its multi-process entry point, initializes the browser process, creates a CEF browser view and loads an initial URL. The default is Google; pass --url=https://example.com/ to choose another page at startup.
 
-CEF remains a multi-process runtime. The executable must be distributed with the matching CEF shared library, resource packs, locales and subprocess support files. A successful Cargo build alone does not prove that these runtime assets are present.
+The GitHub Actions workflow intentionally performs compile-time validation only: Rust tests, cargo check, release build and Debian package inspection. It does not attempt to open a graphical window in CI. Interactive startup and navigation are left for manual testing on Ubuntu.
 
-This milestone is limited to a real CEF window and page rendering. Browser chrome (tabs, address bar, navigation buttons), persistent profile management, downloads, private windows, permissions, pop-up policy and tracker filtering are separate follow-up work. Do not describe those features as implemented.
+The .deb installs the app under /usr/lib/arch-browser, includes the matching CEF runtime libraries, resource packs, locales and sandbox helper, and adds a desktop launcher and icon. The launcher sets LD_LIBRARY_PATH to the private CEF directory. The sandbox helper is packaged root-owned with mode 4755; the browser is not built with Chromium sandboxing disabled.
 
-The Linux CI build validates compilation and unit tests. GUI startup and external HTTPS navigation still require a graphical Linux session and are not claimed as tested by headless CI.
+This is an early functional CEF browser build, not yet a full feature-complete browser. Tabs, custom navigation chrome, history/bookmarks UI, downloads, private profiles, permissions and tracker filtering remain future work.
