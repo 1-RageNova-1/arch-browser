@@ -14,7 +14,7 @@ The Helium fork is GPL-3.0 and is designed for Helium's own Chromium source tree
 
 ## Default blocker
 
-Arch Browser enables CEF's Chrome runtime and sets an application-specific Chrome policy directory under the current user's XDG configuration directory. The managed policy force-installs the official uBlock Origin Lite extension from the Chrome Web Store:
+Arch Browser's Debian launcher adds `--enable-chrome-runtime`; the app sets an application-specific Chrome policy directory under the current user's XDG configuration directory. The managed policy force-installs the official uBlock Origin Lite extension from the Chrome Web Store:
 
 - Extension ID: `ddkjiahejlhfcafbddmgiahcphecmpfh`
 - Store listing: https://chromewebstore.google.com/detail/ublock-origin-lite/ddkjiahejlhfcafbddmgiahcphecmpfh
@@ -24,7 +24,7 @@ Arch Browser enables CEF's Chrome runtime and sets an application-specific Chrom
 
 uBlock Origin Lite is Raymond Hill's Manifest V3 product. Its default rules include uBlock's built-in lists, EasyList, EasyPrivacy and Peter Lowe's ad/tracking server list. It is not feature-identical to full Manifest V2 uBlock Origin.
 
-The extension is fetched and updated from the official Chrome Web Store; its binary is not repackaged or modified by Arch Browser.
+The extension is force-pinned in the toolbar so its status and controls are visible by default. It is fetched and updated from the official Chrome Web Store; its binary is not repackaged or modified by Arch Browser.
 
 ## Optional extensions
 
