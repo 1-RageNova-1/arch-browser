@@ -47,9 +47,6 @@ mkdir -p "$STAGE/DEBIAN" "$LIB_DIR" "$STAGE/usr/bin" \
 
 install -m 0755 "$BUILD_DIR/arch-browser" "$LIB_DIR/arch-browser"
 
-# CEF's release library ships large DWARF debug sections. Keep runtime symbols
-# and unwind information, but drop debug-only sections from the distributable.
-strip --strip-debug "$LIB_DIR/arch-browser"
 
 # Bundle the matching CEF runtime, but not headers, CMake files or build tools.
 shopt -s nullglob
@@ -64,6 +61,10 @@ for directory in locales resources Resources swiftshader; do
         cp -a "$CEF_DIR/$directory" "$LIB_DIR/"
     fi
 done
+
+# CEF's shared library contains large DWARF debug sections. Keep runtime
+# symbols and unwind information, but drop debug-only sections from the .deb.
+strip --strip-debug "$LIB_DIR/libcef.so"
 
 for required in libcef.so icudtl.dat chrome-sandbox; do
     if [[ ! -s "$LIB_DIR/$required" ]]; then
