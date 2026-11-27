@@ -26,14 +26,14 @@ The first page now uses an Arch-themed animated start page with a search field. 
 ## Current state
 
 Implemented:
-- CEF browser window and Chromium page rendering.
-- Animated start page with Google and DuckDuckGo search.
+- CEF Chrome runtime window with native navigation toolbar and address bar.
+- Animated start page with Google and DuckDuckGo search, first-run extension selection, and search bangs (`!yt`, `!g`, `!ddg`, `!w`, `!gh`, `!r`, `!b`).
 - Network-level filtering through adblock-rust.
 - EasyList, EasyPrivacy and extra Google tracker filters.
 - Persistent Rust state model for bookmarks/history (the browser UI for these is not yet connected).
 
 Still under development:
-- Browser tab strip and full address/navigation toolbar.
+- Multi-tab browser interface and tab strip.
 - Bookmark and history panels.
 - Downloads UI and private profiles.
 - Permission controls and a polished settings panel.
