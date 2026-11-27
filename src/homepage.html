@@ -69,6 +69,8 @@ input::placeholder{color:#777184}
 @keyframes drift-b{to{transform:translate(-120px,-100px) scale(1.15)}}
 @media(max-width:540px){.extension-grid{grid-template-columns:1fr 1fr}.extensions{padding:13px;margin-top:20px}.topbar{height:64px;padding:0 17px}.protection{font-size:10px;padding:8px 10px}.protection span:last-child{max-width:145px}main{min-height:calc(100vh - 64px);padding-bottom:54px}.hero-symbol{width:100px;height:100px;margin-bottom:22px}.hero-symbol .inner{width:74px;height:74px}.hero-symbol svg{width:47px;height:47px}.subtitle{font-size:13px;margin:13px 0 25px}.search-shell{gap:4px}.go{padding:0 13px}.shortcuts{margin-top:32px;gap:8px}.shortcut{min-width:94px;padding:11px 9px}.footer{font-size:10px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+.first-run{position:fixed;inset:0;z-index:20;display:none;place-items:center;padding:22px;background:rgba(4,4,8,.82);backdrop-filter:blur(18px)}.first-run.open{display:grid}.setup-card{width:min(690px,100%);max-height:min(90vh,820px);overflow:auto;border:1px solid rgba(190,166,255,.25);border-radius:24px;padding:clamp(22px,4vw,36px);background:linear-gradient(145deg,#171321,#0c0b12);box-shadow:0 28px 100px rgba(0,0,0,.65)}.setup-kicker{color:#bda4fa;font-size:11px;letter-spacing:.16em;font-weight:800}.setup-card h2{font-size:clamp(25px,4vw,34px);letter-spacing:-.04em;margin:12px 0 8px}.setup-copy{color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 22px}.setup-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.setup-option{display:flex;align-items:flex-start;gap:12px;padding:15px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(255,255,255,.025);cursor:pointer}.setup-option:has(input:checked){border-color:rgba(167,139,250,.55);background:rgba(167,139,250,.09)}.setup-option input{width:17px;height:17px;flex:0 0 auto;accent-color:#a78bfa;margin:2px 0 0}.setup-option b{display:block;color:#eee7fa;font-size:13px}.setup-option small{display:block;color:#9d95aa;font-size:11px;line-height:1.5;margin-top:4px}.setup-required{border-color:rgba(145,226,179,.25);background:rgba(33,76,53,.13)}.setup-required input{opacity:.55}.setup-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:23px}.setup-skip{border:0;background:transparent;color:#aaa1b8;font:inherit;font-size:12px;cursor:pointer}.setup-start{border:0;border-radius:12px;padding:13px 18px;background:linear-gradient(135deg,#b99afc,#9272df);color:#110d1b;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.setup-progress{display:none;margin-top:17px;color:#bda4fa;font-size:11px}.setup-progress.show{display:block}.setup-progress:before{content:"";display:block;height:3px;border-radius:4px;background:linear-gradient(90deg,#a78bfa,#91e2b3);margin-bottom:9px;animation:setup-progress 1.1s ease-in-out infinite alternate}@keyframes setup-progress{from{transform:scaleX(.18);transform-origin:left}to{transform:scaleX(1);transform-origin:left}}@media(max-width:540px){.setup-list{grid-template-columns:1fr}.setup-actions{align-items:stretch;flex-direction:column-reverse}.setup-start{width:100%}}
 </style>
 </head>
 <body>
@@ -133,42 +135,23 @@ input::placeholder{color:#777184}
     <a class="extension-manage" href="chrome://extensions/">Gérer les extensions ↗</a>
   </section>
 </main>
+<div class="first-run" id="first-run" role="dialog" aria-modal="true" aria-labelledby="setup-title"><section class="setup-card"><div class="setup-kicker">ARCH BROWSER · PREMIER DÉMARRAGE</div><h2 id="setup-title">Configure ton navigateur.</h2><p class="setup-copy">uBlock Origin Lite est déjà prévu et activé par défaut. Choisis les extensions facultatives que tu souhaites ajouter. Tu pourras toujours les installer plus tard.</p><div class="setup-list"><label class="setup-option setup-required"><input type="checkbox" checked disabled><span><b>uBlock Origin Lite</b><small>Protection contre les publicités et traqueurs · activé automatiquement</small></span></label><label class="setup-option"><input type="checkbox" name="extension" value="1password"><span><b>1Password</b><small>Gestionnaire de mots de passe</small></span></label><label class="setup-option"><input type="checkbox" name="extension" value="bitwarden"><span><b>Bitwarden</b><small>Gestionnaire de mots de passe gratuit et open source</small></span></label><label class="setup-option"><input type="checkbox" name="extension" value="proton"><span><b>Proton VPN</b><small>VPN pour le trafic du navigateur uniquement</small></span></label></div><div class="setup-progress" id="setup-progress" aria-live="polite">Préparation de tes extensions…</div><div class="setup-actions"><button class="setup-skip" id="setup-skip" type="button">Continuer sans extensions</button><button class="setup-start" id="setup-start" type="button">Continuer →</button></div><p class="extension-note">Les extensions facultatives s'ouvrent dans le Chrome Web Store officiel. Confirme leur installation sur chaque page. Aucune extension n'est installée sans ton accord.</p></section></div>
 <footer class="footer">ARCH BROWSER · EASYLIST · EASYPRIVACY · GOOGLE TRACKER RULES</footer>
 <script>
 (() => {
-  const form = document.getElementById("search-form");
-  const input = document.getElementById("query");
-  const engineButtons = [...document.querySelectorAll("[data-engine]")];
-  let engine = "google";
-
-  for (const button of engineButtons) {
-    button.addEventListener("click", () => {
-      engine = button.dataset.engine;
-      for (const item of engineButtons) item.classList.toggle("active", item === button);
-      input.placeholder = engine === "google" ? "Rechercher avec Google ou saisir une adresse…" : "Rechercher en privé avec DuckDuckGo…";
-      input.focus();
-    });
-  }
-
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-    const value = input.value.trim();
-    if (!value) {
-      input.focus();
-      return;
-    }
-    const looksLikeUrl = /^(https?:\/\/|localhost(?::\d+)?(?:\/|$)|[\w-]+(?:\.[\w-]+)+(?::\d+)?(?:\/|$))/i.test(value);
-    if (looksLikeUrl) {
-      location.href = /^https?:\/\//i.test(value) ? value : "https://" + value;
-      return;
-    }
-    const target = engine === "google"
-      ? "https://www.google.com/search?q="
-      : "https://duckduckgo.com/?q=";
-    location.href = target + encodeURIComponent(value);
-  });
-
-  window.addEventListener("load", () => input.focus({preventScroll: true}), {once: true});
+  const form=document.getElementById("search-form"), input=document.getElementById("query");
+  const engineButtons=[...document.querySelectorAll("[data-engine]")];
+  let engine="google";
+  for(const button of engineButtons) button.addEventListener("click",()=>{engine=button.dataset.engine;for(const item of engineButtons)item.classList.toggle("active",item===button);input.placeholder=engine==="google"?"Rechercher avec Google ou saisir une adresse…":"Rechercher en privé avec DuckDuckGo…";input.focus();});
+  const bangs={yt:q=>"https://www.youtube.com/results?search_query="+encodeURIComponent(q),g:q=>"https://www.google.com/search?q="+encodeURIComponent(q),ddg:q=>"https://duckduckgo.com/?q="+encodeURIComponent(q),w:q=>"https://wikipedia.org/w/index.php?search="+encodeURIComponent(q),gh:q=>"https://github.com/search?q="+encodeURIComponent(q),r:q=>"https://www.reddit.com/search/?q="+encodeURIComponent(q),b:q=>"https://www.bing.com/search?q="+encodeURIComponent(q)};
+  form.addEventListener("submit",event=>{event.preventDefault();const value=input.value.trim();if(!value){input.focus();return;}const bang=value.match(/^!(yt|g|ddg|w|gh|r|b)\s*(.*)$/i);if(bang){location.href=bangs[bang[1].toLowerCase()](bang[2].trim());return;}const looksLikeUrl=/^(https?:\/\/|localhost(?::\d+)?(?:\/|$)|[\w-]+(?:\.[\w-]+)+(?:\:\d+)?(?:\/|$))/i.test(value);if(looksLikeUrl){location.href=/^https?:\/\//i.test(value)?value:"https://"+value;return;}location.href=(engine==="google"?"https://www.google.com/search?q=":"https://duckduckgo.com/?q=")+encodeURIComponent(value);});
+  const storeLinks={"1password":"https://chromewebstore.google.com/detail/1password-%E2%80%93-password-mana/aeblfdkhhhdcdjpifhhbdiojplfjncoa",bitwarden:"https://chromewebstore.google.com/detail/bitwarden/nngceckbapebfimnlniiiahkandclblb",proton:"https://chromewebstore.google.com/detail/proton-vpn-fast-secure/jplgfhpmjnbigmhklmmbgecoobifkmpa"};
+  const setup=document.getElementById("first-run"),progress=document.getElementById("setup-progress");
+  const finish=()=>{localStorage.setItem("arch-browser-first-run-v1","complete");setup.classList.remove("open");input.focus({preventScroll:true});};
+  const start=()=>{const selected=[...document.querySelectorAll('input[name="extension"]:checked')].map(item=>item.value);localStorage.setItem("arch-browser-selected-extensions",JSON.stringify(selected));progress.classList.add("show");progress.textContent=selected.length?"Ouverture des pages officielles d'installation…":"Configuration terminée.";setTimeout(()=>{selected.forEach(key=>window.open(storeLinks[key],"_blank","noopener"));finish();},650);};
+  document.getElementById("setup-start").addEventListener("click",start);document.getElementById("setup-skip").addEventListener("click",finish);
+  if(!localStorage.getItem("arch-browser-first-run-v1"))setup.classList.add("open");
+  window.addEventListener("load",()=>{if(!setup.classList.contains("open"))input.focus({preventScroll:true});},{once:true});
 })();
 </script>
 </body>
