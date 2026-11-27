@@ -1,6 +1,6 @@
 //! Arch Browser's initial page and CEF browser window.
 use cef::*;
-use std::cell::RefCell;
+use std::{cell::RefCell, env, fs, path::{Path, PathBuf}};
 
 use super::simple_handler::SimpleHandler;
 
@@ -94,6 +94,31 @@ wrap_app! {
 
 fn homepage_data_url() -> String {
     let html = include_str!("../homepage.html");
+    let data_home = env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")))
+        .unwrap_or_else(|| PathBuf::from("."));
+    let homepage_path = data_home.join("arch-browser").join("homepage.html");
+
+    if let Some(parent) = homepage_path.parent() {
+        if let Err(error) = fs::create_dir_all(parent) {
+            log::warn!("Could not create persistent homepage directory: {error}");
+        } else if let Err(error) = fs::write(&homepage_path, html) {
+            log::warn!("Could not write persistent homepage: {error}");
+        } else {
+            let path = homepage_path.to_string_lossy();
+            let mut encoded = String::with_capacity(path.len());
+            for byte in path.bytes() {
+                if byte.is_ascii_alphanumeric() || b"/-._~".contains(&byte) {
+                    encoded.push(byte as char);
+                } else {
+                    encoded.push_str(&format!("%{byte:02X}"));
+                }
+            }
+            return format!("file://{encoded}");
+        }
+    }
+
     let encoded = base64_encode(Some(html.as_bytes()));
     let encoded = CefString::from(&encoded);
     format!("data:text/html;base64,{}", encoded.to_string())
