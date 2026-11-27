@@ -97,6 +97,10 @@ install -m 0644 "$FILTER_SOURCE/easyprivacy.txt" "$FILTER_DIR/easyprivacy.txt"
 
 cat > "$POLICY_DIR/arch-browser-extensions.json" <<'POLICY'
 {
+  "DefaultSearchProviderEnabled": true,
+  "DefaultSearchProviderName": "DuckDuckGo",
+  "DefaultSearchProviderKeyword": "duckduckgo.com",
+  "DefaultSearchProviderSearchURL": "https://duckduckgo.com/?q={searchTerms}",
   "ExtensionSettings": {
     "*": {
       "installation_mode": "allowed"
