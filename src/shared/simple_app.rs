@@ -66,7 +66,7 @@ wrap_window_delegate! {
 }
 
 wrap_browser_view_delegate! {
-    struct ArchBrowserViewDelegate;
+    struct ArchBrowserViewDelegate {}
 
     impl ViewDelegate {}
 
