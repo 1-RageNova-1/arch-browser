@@ -47,4 +47,6 @@ After installing and launching Arch Browser with an internet connection:
 3. Open its extension details and verify that it is managed by Arch Browser.
 4. Open a test page and use the extension popup to check its filtering status.
 
+DuckDuckGo is configured as the default Chromium search provider, which makes DuckDuckGo bangs such as `!yt`, `!w`, and `!gh` available from the native address bar. The start-page search field also handles a small built-in set of bangs directly.
+
 The project CI compiles and packages the application but does not launch a graphical CEF process. These runtime checks must be performed on a desktop session.
