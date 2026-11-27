@@ -1,6 +1,6 @@
 //! Arch Browser's initial page and CEF browser window.
 use cef::*;
-use std::{cell::RefCell, env, fs, path::{Path, PathBuf}};
+use std::{cell::RefCell, env, fs, path::PathBuf};
 
 use super::simple_handler::SimpleHandler;
 
