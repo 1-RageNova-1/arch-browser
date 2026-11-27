@@ -68,7 +68,7 @@ wrap_window_delegate! {
 wrap_browser_view_delegate! {
     struct ArchBrowserViewDelegate;
 
-    impl BrowserViewDelegate {
+    impl ViewDelegate {
         fn chrome_toolbar_type(
             &self,
             _browser_view: Option<&mut BrowserView>,
