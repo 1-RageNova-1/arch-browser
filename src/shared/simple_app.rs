@@ -24,8 +24,22 @@ wrap_window_delegate! {
                 return;
             };
 
+            let mut layout_settings = BoxLayoutSettings::default();
+            layout_settings.horizontal = 0;
+            layout_settings.default_flex = 0;
+            let layout = window.set_to_box_layout(Some(&layout_settings));
+
             let mut view = View::from(browser_view);
             window.add_child_view(Some(&mut view));
+
+            if let Some(mut toolbar) = browser_view.chrome_toolbar() {
+                window.add_child_view_at(Some(&mut toolbar), 0);
+                if let Some(layout) = layout {
+                    layout.set_flex_for_view(Some(&mut view), 1);
+                }
+            }
+
+            window.layout();
             window.show();
         }
 
@@ -46,6 +60,23 @@ wrap_window_delegate! {
         }
 
         fn window_runtime_style(&self) -> RuntimeStyle {
+            RuntimeStyle::CHROME
+        }
+    }
+}
+
+wrap_browser_view_delegate! {
+    struct ArchBrowserViewDelegate;
+
+    impl BrowserViewDelegate {
+        fn chrome_toolbar_type(
+            &self,
+            _browser_view: Option<&mut BrowserView>,
+        ) -> ChromeToolbarType {
+            ChromeToolbarType::NORMAL
+        }
+
+        fn browser_runtime_style(&self) -> RuntimeStyle {
             RuntimeStyle::CHROME
         }
     }
@@ -93,6 +124,7 @@ wrap_browser_process_handler! {
 
             let mut client = SimpleHandler::new();
             *self.client.borrow_mut() = Some(client.clone());
+            let mut browser_view_delegate = ArchBrowserViewDelegate::new();
 
             let browser_view = browser_view_create(
                 Some(&mut client),
@@ -100,7 +132,7 @@ wrap_browser_process_handler! {
                 Some(&settings),
                 None,
                 None,
-                None,
+                Some(&mut browser_view_delegate),
             );
 
             let mut delegate = ArchWindowDelegate::new(RefCell::new(browser_view));
